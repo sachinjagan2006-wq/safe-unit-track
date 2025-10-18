@@ -37,13 +37,19 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-8 shadow-glow">
+    <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-primary/5 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-secondary/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
+      </div>
+
+      <Card className="w-full max-w-md p-8 shadow-glow relative backdrop-blur-sm bg-card/95 animate-slide-up">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-full bg-gradient-primary flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded-full bg-gradient-primary flex items-center justify-center mx-auto mb-4 animate-pulse-slow shadow-glow">
             <Droplet className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
+          <h1 className="text-3xl font-bold mb-2 text-gradient">Welcome Back</h1>
           <p className="text-muted-foreground">Access your blockchain blood tracker account</p>
         </div>
 
@@ -53,15 +59,15 @@ const Auth = () => {
             <Button 
               onClick={handleConnectWallet} 
               variant="outline" 
-              className="w-full"
+              className="w-full transition-all hover:scale-105 hover:shadow-glow"
             >
               <Wallet className="w-4 h-4 mr-2" />
               Connect MetaMask Wallet
             </Button>
           ) : (
-            <div className="flex items-center justify-between p-3 bg-success/10 border border-success/20 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-success/10 border border-success/20 rounded-lg animate-slide-up">
               <div className="flex items-center gap-2">
-                <Badge className="bg-success">
+                <Badge className="bg-success animate-pulse-slow">
                   <ShieldCheck className="w-3 h-3 mr-1" />
                   Connected
                 </Badge>
@@ -116,7 +122,7 @@ const Auth = () => {
               <Label htmlFor="login-password">Password</Label>
               <Input id="login-password" type="password" placeholder="••••••••" />
             </div>
-            <Button onClick={() => handleAuth("login")} className="w-full">
+            <Button onClick={() => handleAuth("login")} className="w-full bg-gradient-primary hover:opacity-90 transition-all hover:scale-105 shadow-lg">
               Login
             </Button>
           </TabsContent>
@@ -154,7 +160,7 @@ const Auth = () => {
                 </Select>
               </div>
             )}
-            <Button onClick={() => handleAuth("signup")} className="w-full">
+            <Button onClick={() => handleAuth("signup")} className="w-full bg-gradient-primary hover:opacity-90 transition-all hover:scale-105 shadow-lg">
               Create Account
             </Button>
           </TabsContent>
