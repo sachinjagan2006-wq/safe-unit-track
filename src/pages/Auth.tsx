@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,12 +9,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Wallet, Droplet, Building2, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [role, setRole] = useState<string>("donor");
   const [walletConnected, setWalletConnected] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    fullName: "",
+    bloodType: "",
+    phone: "",
+    location: "",
+    hospitalName: "",
+    licenseNumber: "",
+    address: "",
+    city: ""
+  });
+
+  useEffect(() => {
+    if (user) {
+      navigate(`/dashboard/${role}`);
+    }
+  }, [user, role, navigate]);
 
   const handleConnectWallet = () => {
     // Simulate MetaMask connection
@@ -25,15 +47,118 @@ const Auth = () => {
     });
   };
 
-  const handleAuth = (type: "login" | "signup") => {
-    toast({
-      title: type === "login" ? "Login Successful" : "Registration Successful",
-      description: `Welcome! Redirecting to ${role} dashboard...`,
-    });
-    
-    setTimeout(() => {
-      navigate(`/dashboard/${role}`);
-    }, 1500);
+  const handleSignup = async () => {
+    if (!formData.email || !formData.password || !formData.fullName) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            full_name: formData.fullName,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        // Update profile with additional info
+        await supabase
+          .from("profiles")
+          .update({
+            full_name: formData.fullName,
+            blood_type: role === "donor" && formData.bloodType ? formData.bloodType as any : null,
+            phone: formData.phone,
+            location: formData.location,
+            wallet_address: walletConnected ? "0x742d...3a4f" : null,
+          })
+          .eq("id", data.user.id);
+
+        // Assign role
+        await supabase.from("user_roles").insert({
+          user_id: data.user.id,
+          role: role as "donor" | "hospital" | "admin",
+        });
+
+        // If hospital, create hospital record
+        if (role === "hospital") {
+          await supabase.from("hospitals").insert({
+            user_id: data.user.id,
+            hospital_name: formData.hospitalName,
+            license_number: formData.licenseNumber,
+            address: formData.address,
+            city: formData.city,
+            verified: false,
+          });
+        }
+
+        toast({
+          title: "Registration Successful",
+          description: "Welcome! Redirecting to your dashboard...",
+        });
+
+        setTimeout(() => {
+          navigate(`/dashboard/${role}`);
+        }, 1500);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Registration Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = async () => {
+    if (!formData.email || !formData.password) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter email and password",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Login Successful",
+        description: "Welcome back!",
+      });
+
+      setTimeout(() => {
+        navigate(`/dashboard/${role}`);
+      }, 1000);
+    } catch (error: any) {
+      toast({
+        title: "Login Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -116,52 +241,146 @@ const Auth = () => {
           <TabsContent value="login" className="space-y-4">
             <div>
               <Label htmlFor="login-email">Email</Label>
-              <Input id="login-email" type="email" placeholder="your@email.com" />
+              <Input 
+                id="login-email" 
+                type="email" 
+                placeholder="your@email.com"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
             </div>
             <div>
               <Label htmlFor="login-password">Password</Label>
-              <Input id="login-password" type="password" placeholder="••••••••" />
+              <Input 
+                id="login-password" 
+                type="password" 
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              />
             </div>
-            <Button onClick={() => handleAuth("login")} className="w-full bg-gradient-primary hover:opacity-90 transition-all hover:scale-105 shadow-lg">
-              Login
+            <Button 
+              onClick={handleLogin} 
+              disabled={loading}
+              className="w-full bg-gradient-primary hover:opacity-90 transition-all hover:scale-105 shadow-lg"
+            >
+              {loading ? "Logging in..." : "Login"}
             </Button>
           </TabsContent>
 
           <TabsContent value="signup" className="space-y-4">
             <div>
               <Label htmlFor="signup-name">Full Name</Label>
-              <Input id="signup-name" type="text" placeholder="John Doe" />
+              <Input 
+                id="signup-name" 
+                type="text" 
+                placeholder="John Doe"
+                value={formData.fullName}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              />
             </div>
             <div>
               <Label htmlFor="signup-email">Email</Label>
-              <Input id="signup-email" type="email" placeholder="your@email.com" />
+              <Input 
+                id="signup-email" 
+                type="email" 
+                placeholder="your@email.com"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
             </div>
             <div>
               <Label htmlFor="signup-password">Password</Label>
-              <Input id="signup-password" type="password" placeholder="••••••••" />
+              <Input 
+                id="signup-password" 
+                type="password" 
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              />
             </div>
             {role === "donor" && (
-              <div>
-                <Label htmlFor="blood-type">Blood Type</Label>
-                <Select>
-                  <SelectTrigger id="blood-type">
-                    <SelectValue placeholder="Select blood type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="A+">A+</SelectItem>
-                    <SelectItem value="A-">A-</SelectItem>
-                    <SelectItem value="B+">B+</SelectItem>
-                    <SelectItem value="B-">B-</SelectItem>
-                    <SelectItem value="AB+">AB+</SelectItem>
-                    <SelectItem value="AB-">AB-</SelectItem>
-                    <SelectItem value="O+">O+</SelectItem>
-                    <SelectItem value="O-">O-</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <>
+                <div>
+                  <Label htmlFor="blood-type">Blood Type</Label>
+                  <Select value={formData.bloodType} onValueChange={(value) => setFormData({ ...formData, bloodType: value })}>
+                    <SelectTrigger id="blood-type">
+                      <SelectValue placeholder="Select blood type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="A+">A+</SelectItem>
+                      <SelectItem value="A-">A-</SelectItem>
+                      <SelectItem value="B+">B+</SelectItem>
+                      <SelectItem value="B-">B-</SelectItem>
+                      <SelectItem value="AB+">AB+</SelectItem>
+                      <SelectItem value="AB-">AB-</SelectItem>
+                      <SelectItem value="O+">O+</SelectItem>
+                      <SelectItem value="O-">O-</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="location">Location</Label>
+                  <Input 
+                    id="location" 
+                    type="text" 
+                    placeholder="City, State"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  />
+                </div>
+              </>
             )}
-            <Button onClick={() => handleAuth("signup")} className="w-full bg-gradient-primary hover:opacity-90 transition-all hover:scale-105 shadow-lg">
-              Create Account
+            {role === "hospital" && (
+              <>
+                <div>
+                  <Label htmlFor="hospital-name">Hospital Name</Label>
+                  <Input 
+                    id="hospital-name" 
+                    type="text" 
+                    placeholder="City General Hospital"
+                    value={formData.hospitalName}
+                    onChange={(e) => setFormData({ ...formData, hospitalName: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="license">License Number</Label>
+                  <Input 
+                    id="license" 
+                    type="text" 
+                    placeholder="LIC123456"
+                    value={formData.licenseNumber}
+                    onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="address">Address</Label>
+                  <Input 
+                    id="address" 
+                    type="text" 
+                    placeholder="123 Main St"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="city">City</Label>
+                  <Input 
+                    id="city" 
+                    type="text" 
+                    placeholder="New York"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  />
+                </div>
+              </>
+            )}
+            <Button 
+              onClick={handleSignup} 
+              disabled={loading}
+              className="w-full bg-gradient-primary hover:opacity-90 transition-all hover:scale-105 shadow-lg"
+            >
+              {loading ? "Creating Account..." : "Create Account"}
             </Button>
           </TabsContent>
         </Tabs>

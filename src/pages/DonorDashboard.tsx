@@ -1,4 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,13 +12,59 @@ import { Calendar, MapPin, Droplet, Award, CheckCircle, Clock, Hash } from "luci
 import DonationForm from "@/components/DonationForm";
 
 const DonorDashboard = () => {
+  const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   const [showDonationForm, setShowDonationForm] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+  const [donations, setDonations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const donationHistory = [
-    { id: 1, date: "2024-12-15", hospital: "City General Hospital", amount: "450ml", status: "Verified", txHash: "0x1a2b...3c4d", blockNumber: 15234567 },
-    { id: 2, date: "2024-09-22", hospital: "St. Mary's Medical Center", amount: "450ml", status: "Verified", txHash: "0x5e6f...7g8h", blockNumber: 15123456 },
-    { id: 3, date: "2024-06-10", hospital: "Regional Blood Bank", amount: "450ml", status: "Verified", txHash: "0x9i0j...1k2l", blockNumber: 15012345 },
-  ];
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth");
+    }
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (user) {
+      fetchProfile();
+      fetchDonations();
+    }
+  }, [user]);
+
+  const fetchProfile = async () => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user?.id)
+      .single();
+
+    if (data) setProfile(data);
+  };
+
+  const fetchDonations = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("donations")
+      .select("*")
+      .eq("donor_id", user?.id)
+      .order("donation_date", { ascending: false });
+
+    if (data) {
+      setDonations(data);
+    }
+    setLoading(false);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
+
+  if (authLoading || loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -27,13 +77,18 @@ const DonorDashboard = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold">Donor Dashboard</h1>
-              <p className="text-sm text-muted-foreground">Welcome back, John Doe</p>
+              <p className="text-sm text-muted-foreground">Welcome back, {profile?.full_name || "Donor"}</p>
             </div>
           </div>
-          <Badge className="bg-success">
-            <CheckCircle className="w-3 h-3 mr-1" />
-            Verified Donor
-          </Badge>
+          <div className="flex gap-2">
+            <Badge className="bg-success">
+              <CheckCircle className="w-3 h-3 mr-1" />
+              Verified Donor
+            </Badge>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -45,7 +100,7 @@ const DonorDashboard = () => {
               <Droplet className="w-8 h-8 text-primary" />
               <Badge variant="outline">Total</Badge>
             </div>
-            <div className="text-3xl font-bold mb-1">12</div>
+            <div className="text-3xl font-bold mb-1">{donations.length}</div>
             <p className="text-sm text-muted-foreground">Donations Made</p>
           </Card>
 
@@ -63,7 +118,7 @@ const DonorDashboard = () => {
               <CheckCircle className="w-8 h-8 text-success" />
               <Badge variant="outline">Status</Badge>
             </div>
-            <div className="text-3xl font-bold mb-1">A+</div>
+            <div className="text-3xl font-bold mb-1">{profile?.blood_type || "N/A"}</div>
             <p className="text-sm text-muted-foreground">Blood Type</p>
           </Card>
 
@@ -95,43 +150,56 @@ const DonorDashboard = () => {
                   </Button>
                 </div>
 
-                {donationHistory.map((donation) => (
-                  <Card key={donation.id} className="p-6 hover:shadow-lg transition-shadow">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="font-semibold text-lg mb-1">{donation.hospital}</h3>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            {donation.date}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Droplet className="w-4 h-4" />
-                            {donation.amount}
-                          </span>
-                        </div>
-                      </div>
-                      <Badge className="bg-success">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        {donation.status}
-                      </Badge>
-                    </div>
-                    
-                    <div className="bg-muted/30 rounded-lg p-4 space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground flex items-center gap-2">
-                          <Hash className="w-4 h-4" />
-                          Transaction Hash:
-                        </span>
-                        <code className="font-mono text-primary">{donation.txHash}</code>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Block Number:</span>
-                        <code className="font-mono">{donation.blockNumber}</code>
-                      </div>
-                    </div>
+                {donations.length === 0 ? (
+                  <Card className="p-8 text-center">
+                    <p className="text-muted-foreground">No donations recorded yet</p>
+                    <Button className="mt-4" onClick={() => setShowDonationForm(true)}>
+                      Record Your First Donation
+                    </Button>
                   </Card>
-                ))}
+                ) : (
+                  donations.map((donation) => (
+                    <Card key={donation.id} className="p-6 hover:shadow-lg transition-shadow">
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <h3 className="font-semibold text-lg mb-1">{donation.location}</h3>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4" />
+                              {new Date(donation.donation_date).toLocaleDateString()}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Droplet className="w-4 h-4" />
+                              {donation.quantity_ml}ml
+                            </span>
+                          </div>
+                        </div>
+                        <Badge className={donation.status === "verified" ? "bg-success" : "bg-warning"}>
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          {donation.status}
+                        </Badge>
+                      </div>
+                      
+                      {donation.blockchain_tx_hash && (
+                        <div className="bg-muted/30 rounded-lg p-4 space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground flex items-center gap-2">
+                              <Hash className="w-4 h-4" />
+                              Transaction Hash:
+                            </span>
+                            <code className="font-mono text-primary">{donation.blockchain_tx_hash}</code>
+                          </div>
+                          {donation.block_number && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Block Number:</span>
+                              <code className="font-mono">{donation.block_number}</code>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </Card>
+                  ))
+                )}
               </TabsContent>
 
               <TabsContent value="profile">
@@ -141,8 +209,10 @@ const DonorDashboard = () => {
                       <AvatarFallback className="text-2xl bg-gradient-primary text-white">JD</AvatarFallback>
                     </Avatar>
                     <div>
-                      <h2 className="text-2xl font-bold mb-1">John Doe</h2>
-                      <p className="text-muted-foreground mb-2">Verified Donor since Jan 2024</p>
+                      <h2 className="text-2xl font-bold mb-1">{profile?.full_name}</h2>
+                      <p className="text-muted-foreground mb-2">
+                        Verified Donor since {new Date(profile?.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                      </p>
                       <Badge className="bg-success">Identity Verified</Badge>
                     </div>
                   </div>
@@ -150,22 +220,24 @@ const DonorDashboard = () => {
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
                       <Label className="text-sm text-muted-foreground">Blood Type</Label>
-                      <p className="text-lg font-semibold">A+ Positive</p>
+                      <p className="text-lg font-semibold">{profile?.blood_type || "Not specified"}</p>
                     </div>
                     <div>
                       <Label className="text-sm text-muted-foreground">Location</Label>
                       <p className="text-lg font-semibold flex items-center gap-2">
                         <MapPin className="w-4 h-4" />
-                        New York, NY
+                        {profile?.location || "Not specified"}
                       </p>
                     </div>
                     <div>
                       <Label className="text-sm text-muted-foreground">Wallet Address</Label>
-                      <code className="text-sm font-mono bg-muted px-2 py-1 rounded">0x742d...3a4f</code>
+                      <code className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                        {profile?.wallet_address || "Not connected"}
+                      </code>
                     </div>
                     <div>
                       <Label className="text-sm text-muted-foreground">Total Donations</Label>
-                      <p className="text-lg font-semibold">12 Units</p>
+                      <p className="text-lg font-semibold">{donations.length} Units</p>
                     </div>
                   </div>
                 </Card>
@@ -211,7 +283,12 @@ const DonorDashboard = () => {
       </div>
 
       {showDonationForm && (
-        <DonationForm onClose={() => setShowDonationForm(false)} />
+        <DonationForm 
+          onClose={() => {
+            setShowDonationForm(false);
+            fetchDonations();
+          }} 
+        />
       )}
     </div>
   );
