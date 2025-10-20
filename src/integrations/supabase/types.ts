@@ -14,16 +14,263 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      blood_inventory: {
+        Row: {
+          blood_type: Database["public"]["Enums"]["blood_type"]
+          hospital_id: string
+          id: string
+          last_updated: string | null
+          quantity_ml: number
+        }
+        Insert: {
+          blood_type: Database["public"]["Enums"]["blood_type"]
+          hospital_id: string
+          id?: string
+          last_updated?: string | null
+          quantity_ml?: number
+        }
+        Update: {
+          blood_type?: Database["public"]["Enums"]["blood_type"]
+          hospital_id?: string
+          id?: string
+          last_updated?: string | null
+          quantity_ml?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blood_inventory_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hospitals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blood_requests: {
+        Row: {
+          blood_type: Database["public"]["Enums"]["blood_type"]
+          created_at: string | null
+          fulfilled_at: string | null
+          hospital_id: string
+          id: string
+          matched_donation_id: string | null
+          patient_name: string
+          quantity_ml: number
+          reason: string
+          status: Database["public"]["Enums"]["request_status"] | null
+          updated_at: string | null
+          urgency: string
+        }
+        Insert: {
+          blood_type: Database["public"]["Enums"]["blood_type"]
+          created_at?: string | null
+          fulfilled_at?: string | null
+          hospital_id: string
+          id?: string
+          matched_donation_id?: string | null
+          patient_name: string
+          quantity_ml: number
+          reason: string
+          status?: Database["public"]["Enums"]["request_status"] | null
+          updated_at?: string | null
+          urgency: string
+        }
+        Update: {
+          blood_type?: Database["public"]["Enums"]["blood_type"]
+          created_at?: string | null
+          fulfilled_at?: string | null
+          hospital_id?: string
+          id?: string
+          matched_donation_id?: string | null
+          patient_name?: string
+          quantity_ml?: number
+          reason?: string
+          status?: Database["public"]["Enums"]["request_status"] | null
+          updated_at?: string | null
+          urgency?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blood_requests_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hospitals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blood_requests_matched_donation_id_fkey"
+            columns: ["matched_donation_id"]
+            isOneToOne: false
+            referencedRelation: "donations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      donations: {
+        Row: {
+          block_number: string | null
+          blockchain_tx_hash: string | null
+          blood_type: Database["public"]["Enums"]["blood_type"]
+          created_at: string | null
+          donation_date: string
+          donor_id: string
+          id: string
+          location: string
+          notes: string | null
+          qr_code: string | null
+          quantity_ml: number
+          status: Database["public"]["Enums"]["donation_status"] | null
+          updated_at: string | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          block_number?: string | null
+          blockchain_tx_hash?: string | null
+          blood_type: Database["public"]["Enums"]["blood_type"]
+          created_at?: string | null
+          donation_date: string
+          donor_id: string
+          id?: string
+          location: string
+          notes?: string | null
+          qr_code?: string | null
+          quantity_ml: number
+          status?: Database["public"]["Enums"]["donation_status"] | null
+          updated_at?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          block_number?: string | null
+          blockchain_tx_hash?: string | null
+          blood_type?: Database["public"]["Enums"]["blood_type"]
+          created_at?: string | null
+          donation_date?: string
+          donor_id?: string
+          id?: string
+          location?: string
+          notes?: string | null
+          qr_code?: string | null
+          quantity_ml?: number
+          status?: Database["public"]["Enums"]["donation_status"] | null
+          updated_at?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: []
+      }
+      hospitals: {
+        Row: {
+          address: string
+          city: string
+          created_at: string | null
+          hospital_name: string
+          id: string
+          license_number: string
+          updated_at: string | null
+          user_id: string
+          verified: boolean | null
+        }
+        Insert: {
+          address: string
+          city: string
+          created_at?: string | null
+          hospital_name: string
+          id?: string
+          license_number: string
+          updated_at?: string | null
+          user_id: string
+          verified?: boolean | null
+        }
+        Update: {
+          address?: string
+          city?: string
+          created_at?: string | null
+          hospital_name?: string
+          id?: string
+          license_number?: string
+          updated_at?: string | null
+          user_id?: string
+          verified?: boolean | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          blood_type: Database["public"]["Enums"]["blood_type"] | null
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          location: string | null
+          phone: string | null
+          updated_at: string | null
+          wallet_address: string | null
+        }
+        Insert: {
+          blood_type?: Database["public"]["Enums"]["blood_type"] | null
+          created_at?: string | null
+          email: string
+          full_name: string
+          id: string
+          location?: string | null
+          phone?: string | null
+          updated_at?: string | null
+          wallet_address?: string | null
+        }
+        Update: {
+          blood_type?: Database["public"]["Enums"]["blood_type"] | null
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          location?: string | null
+          phone?: string | null
+          updated_at?: string | null
+          wallet_address?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "donor" | "hospital"
+      blood_type: "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-"
+      donation_status: "pending" | "verified" | "used" | "expired"
+      request_status: "pending" | "matched" | "fulfilled" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +397,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "donor", "hospital"],
+      blood_type: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
+      donation_status: ["pending", "verified", "used", "expired"],
+      request_status: ["pending", "matched", "fulfilled", "cancelled"],
+    },
   },
 } as const
